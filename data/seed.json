@@ -1,0 +1,14 @@
+{
+  "users": [
+    { "id": "u-demo", "name": "Aarav Sharma", "home": "Bengaluru", "budget": 9000, "interests": { "nature": 0.88, "adventure": 0.76, "heritage": 0.42, "wellness": 0.54, "beach": 0.18 }, "history": ["Coorg", "Munnar", "Rishikesh"] }
+  ],
+  "destinations": [
+    { "id": "munnar", "name": "Munnar", "state": "Kerala", "location": { "type": "Point", "coordinates": [77.0595, 10.0889] }, "tags": ["nature", "wellness", "adventure"], "dailyCost": 6200, "aqi": 38, "weather": "pleasant", "temperature": 21, "rainRisk": 22, "crowd": 4200, "capacity": 7000, "carbon": 28, "heritage": 62, "image": "🌿", "description": "Tea hills, forest trails and calm weather." },
+    { "id": "coorg", "name": "Coorg", "state": "Karnataka", "location": { "type": "Point", "coordinates": [75.8069, 12.3375] }, "tags": ["nature", "adventure", "wellness"], "dailyCost": 5400, "aqi": 46, "weather": "pleasant", "temperature": 23, "rainRisk": 30, "crowd": 3500, "capacity": 6100, "carbon": 24, "heritage": 45, "image": "☕", "description": "Coffee estates, waterfalls and low-impact stays." },
+    { "id": "hampi", "name": "Hampi", "state": "Karnataka", "location": { "type": "Point", "coordinates": [76.4600, 15.3350] }, "tags": ["heritage", "adventure", "nature"], "dailyCost": 4300, "aqi": 65, "weather": "warm", "temperature": 31, "rainRisk": 8, "crowd": 2900, "capacity": 4500, "carbon": 33, "heritage": 96, "image": "🏛️", "description": "UNESCO heritage landscape with a strong conservation focus." },
+    { "id": "rishikesh", "name": "Rishikesh", "state": "Uttarakhand", "location": { "type": "Point", "coordinates": [78.2676, 30.0869] }, "tags": ["adventure", "wellness", "nature"], "dailyCost": 5100, "aqi": 58, "weather": "pleasant", "temperature": 25, "rainRisk": 17, "crowd": 7600, "capacity": 8200, "carbon": 31, "heritage": 56, "image": "🏔️", "description": "River adventure and yoga, nearing peak visitor pressure." },
+    { "id": "pondicherry", "name": "Puducherry", "state": "Tamil Nadu", "location": { "type": "Point", "coordinates": [79.8083, 11.9416] }, "tags": ["beach", "heritage", "wellness"], "dailyCost": 6800, "aqi": 54, "weather": "humid", "temperature": 30, "rainRisk": 38, "crowd": 5100, "capacity": 6400, "carbon": 41, "heritage": 70, "image": "🌊", "description": "Coastal heritage, cycling routes and responsible stays." },
+    { "id": "kaziranga", "name": "Kaziranga", "state": "Assam", "location": { "type": "Point", "coordinates": [93.1711, 26.5775] }, "tags": ["nature", "adventure", "heritage"], "dailyCost": 7900, "aqi": 31, "weather": "pleasant", "temperature": 24, "rainRisk": 35, "crowd": 1800, "capacity": 3000, "carbon": 21, "heritage": 88, "image": "🦏", "description": "Wildlife destination with strict carrying-capacity protection." }
+  ],
+  "visits": []
+}

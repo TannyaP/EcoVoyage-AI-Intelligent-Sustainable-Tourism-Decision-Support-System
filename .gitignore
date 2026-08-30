@@ -1,0 +1,6 @@
+node_modules/
+vendor/
+.env
+data/runtime.json
+*.log
+.DS_Store

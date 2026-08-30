@@ -448,3 +448,9 @@ This combination of behavioral personalization, sustainability analytics, and No
 
 ---
 
+## ✅ Working Prototype
+
+The proposed system is implemented in this repository as a MongoDB-backed React and Express application. It includes the three role-based dashboards (Tourist, Government and Administrator), JWT login, Dynamic Tourist Interest Profiling (DTIP), DTSI++ sustainability scoring, MongoDB GeoJSON nearby search, a native MongoDB time-series environmental collection, a Random Forest crowd predictor, carrying-capacity assessment and a hybrid destination recommender.
+
+See [IMPLEMENTATION.md](IMPLEMENTATION.md) for setup instructions, the demo accounts, API endpoints, database collections, live data connector configuration and the research-data limitations of the prototype.
+

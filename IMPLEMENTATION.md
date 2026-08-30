@@ -62,6 +62,9 @@ MONGODB_DB=ecovoyage_ai
 JWT_SECRET=use-a-long-random-value-here
 OPENWEATHER_API_KEY=your_openweather_key
 WAQI_TOKEN=your_waqi_token
+INGEST_INTERVAL_MINUTES=60
+USE_ATLAS_SEARCH=false
+ATLAS_SEARCH_INDEX=destination-search
 ```
 
 The Administrator dashboard’s **Refresh environment & OSM data** button then calls these integrations:
@@ -71,6 +74,15 @@ The Administrator dashboard’s **Refresh environment & OSM data** button then c
 - **OpenStreetMap/Overpass**: nearby tourism POI count
 
 UNESCO heritage information, festivals and tourism statistics remain seeded in this prototype because the source datasets/API access credentials were not supplied. Seeded or fallback values are explicitly labelled in the app and database. Replace those documents with cited official exports before presenting research results as real-world findings.
+
+## Completion additions
+
+- **Automated ingestion:** Set `INGEST_INTERVAL_MINUTES` to `5` or greater to schedule the same validated environmental ingestion job used by the Admin dashboard. Each run is auditable in the `ingestionRuns` collection.
+- **Official-data import:** The Admin dashboard accepts JSON records for destinations, tourism statistics, historical environment readings, UNESCO/heritage sites, festivals and tourist-behaviour logs. It validates fields, normalises dates/coordinates/categories, records rejected-row examples and stores provenance in `sourceRegistry`. At 30 or more imported tourism-statistic rows, training uses them instead of the synthetic demonstration history.
+- **Full capacity factors:** Carrying-capacity calculations now account for weather, AQI, water availability, heritage protection and protected-area sensitivity.
+- **Similarity and eco-routes:** The hybrid ranker includes transparent cosine similarity to destinations in the tourist’s history. The Tourist dashboard also provides an OSRM-based route when reachable, transparent low-carbon travel guidance and an estimated shared-transport versus private-car comparison.
+- **Heatmap and latency:** Maps display crowd-pressure heat overlays. The Admin dashboard can persist local MongoDB timing results for `$near`, latest-environment `$lookup` and indexed tag filtering; Government users can view the latest latency evidence.
+- **Atlas Search fallback:** With an Atlas Search index configured, text search uses `$search`; a safe indexed-field/regex fallback keeps the local MongoDB classroom demo working without Atlas.
 
 ## API endpoints
 
@@ -86,6 +98,10 @@ UNESCO heritage information, festivals and tourism statistics remain seeded in t
 | `POST /api/admin/environment/snapshots` | Manually insert an environmental reading |
 | `POST /api/admin/ingestion/run` | Run configured OpenWeather, WAQI and OSM ingestion |
 | `POST /api/admin/models/train` | Train and persist a Random Forest evaluation run |
+| `GET /api/destinations/search?q=...` | Destination discovery via Atlas Search or local fallback |
+| `GET /api/routes/eco?destinationId=...` | Road/fallback geometry and transparent low-impact travel guidance |
+| `POST /api/admin/performance/run` | Persist local MongoDB query-latency evidence |
+| `POST /api/admin/datasets/import` | Validate, normalise and import official JSON data with provenance |
 
 ## Research-data note
 

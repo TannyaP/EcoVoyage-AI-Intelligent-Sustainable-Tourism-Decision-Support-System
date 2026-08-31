@@ -15,6 +15,22 @@ This folder contains a small, reproducible public-data extract used for regional
 
 These are **state/UT aggregates**, not observations for Munnar, Coorg, Hampi, Rishikesh, Puducherry, or Kaziranga. The application stores them in MongoDB’s `regionalTourismStatistics` collection for policy context and marks every document `modelEligible: false`. They must not be treated as destination visitor counts or used to calculate destination crowd-model accuracy.
 
+## Bundled UNESCO heritage records
+
+`data/official/unesco-world-heritage.json` contains two official records that exactly match project destinations:
+
+| Project destination | Official property | UNESCO ID | Type | Inscribed |
+|---|---|---:|---|---:|
+| Hampi | Group of Monuments at Hampi | 241bis | Cultural | 1986 |
+| Kaziranga | Kaziranga National Park | 337 | Natural | 1985 |
+
+- Publisher: UNESCO World Heritage Centre
+- India listing: https://whc.unesco.org/en/statesparties/in
+- Property sources: https://whc.unesco.org/en/list/241 and https://whc.unesco.org/en/list/337
+- Retrieval date: 31 August 2026
+
+These records are seeded into MongoDB’s `heritageSites` collection by idempotent upsert. The `protectionLevel: 100` used in the application is a transparent local policy rule for maximum conservation safeguarding; it is not a UNESCO measurement or ranking.
+
 ## What is needed for valid model evaluation
 
 To replace the synthetic crowd-model demonstration, import at least 30 time-stamped, **destination-level** visitor observations. Each row must identify the individual destination and should be traceable to the destination authority, entry/booking system, or another documented measurement process. Only records deliberately supplied with `"modelEligible": true` are selected for training.

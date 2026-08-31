@@ -11,6 +11,7 @@ const { round, predictModel, trainCrowdModel, capacityAssessment } = require('./
 const ROOT = __dirname;
 const SEED = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'seed.json'), 'utf8'));
 const OFFICIAL_REGIONAL_TOURISM_STATS = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'official', 'tourism-state-visits-2023-2024.json'), 'utf8'));
+const OFFICIAL_UNESCO_HERITAGE = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'official', 'unesco-world-heritage.json'), 'utf8'));
 const PORT = process.env.PORT || 3000;
 const URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
 const DB_NAME = process.env.MONGODB_DB || 'ecovoyage_ai';
@@ -360,7 +361,9 @@ function normaliseDatasetRecord(dataset, raw, index) {
     const longitude = Number(record.longitude ?? record.lng ?? record.location?.coordinates?.[0]);
     const name = safeText(record.name || record.site);
     if (!destinationId || !name || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return { error: `Row ${sourceRow}: heritage record requires destinationId, name and valid latitude/longitude.` };
-    return { value: { id: slug(record.id || `${destinationId}-${name}`), destinationId, name, category: safeText(record.category || 'heritage'), location: { type: 'Point', coordinates: [longitude, latitude] }, protectionLevel: clamp(record.protectionLevel ?? record.heritageScore ?? 75), dataLabel: 'external-import' } };
+    const inscribedYear = Number(record.inscribedYear);
+    const criteria = (Array.isArray(record.criteria) ? record.criteria : String(record.criteria || '').split(',')).map(item => safeText(item).replace(/[()]/g, '')).filter(Boolean).slice(0, 10);
+    return { value: { id: slug(record.id || `${destinationId}-${name}`), destinationId, name, category: safeText(record.category || 'heritage'), location: { type: 'Point', coordinates: [longitude, latitude] }, protectionLevel: clamp(record.protectionLevel ?? record.heritageScore ?? 75), protectionLevelBasis: safeText(record.protectionLevelBasis || 'application-configured safeguard'), officialId: safeText(record.officialId || record.unescoId || ''), officialDesignation: safeText(record.officialDesignation || ''), inscribedYear: Number.isInteger(inscribedYear) && inscribedYear > 1800 && inscribedYear <= new Date().getFullYear() ? inscribedYear : null, criteria, propertyHectares: Number.isFinite(Number(record.propertyHectares)) ? Number(record.propertyHectares) : null, dataLabel: 'external-import' } };
   }
   if (dataset === 'environmentReadings') {
     const destinationId = slug(record.destinationId || record.destination || record.place);
@@ -593,6 +596,39 @@ async function initialise() {
     } }]);
   }
   if (!await db.collection('festivals').countDocuments()) await db.collection('festivals').insertMany(festivalSeeds);
+  const heritageImportedAt = new Date();
+  await db.collection('heritageSites').bulkWrite(OFFICIAL_UNESCO_HERITAGE.map(site => ({
+    updateOne: {
+      filter: { id: site.id },
+      update: {
+        $setOnInsert: {
+          ...site,
+          source: 'UNESCO World Heritage Centre',
+          sourceUrl: site.officialUrl,
+          importedAt: heritageImportedAt,
+          dataLabel: 'official UNESCO World Heritage record; protection level is an application safeguard, not a UNESCO score'
+        }
+      },
+      upsert: true
+    }
+  })));
+  await db.collection('destinations').bulkWrite(OFFICIAL_UNESCO_HERITAGE.map(site => ({
+    updateOne: {
+      filter: { id: site.destinationId },
+      update: {
+        $set: {
+          unescoWorldHeritage: {
+            siteId: site.officialId,
+            designation: site.officialDesignation,
+            category: site.category,
+            inscribedYear: site.inscribedYear,
+            criteria: site.criteria,
+            sourceUrl: site.officialUrl
+          }
+        }
+      }
+    }
+  })));
   if (!await db.collection('regionalTourismStatistics').countDocuments()) {
     const importedAt = new Date();
     await db.collection('regionalTourismStatistics').insertMany(OFFICIAL_REGIONAL_TOURISM_STATS.map(record => ({
@@ -607,12 +643,16 @@ async function initialise() {
     })));
   }
   await db.collection('sourceRegistry').bulkWrite([
-    { updateOne: { filter: { key: 'unesco' }, update: { $setOnInsert: { key: 'unesco', label: 'UNESCO World Heritage data', sourceUrl: 'https://whc.unesco.org/en/list/', status: 'awaiting official import' } }, upsert: true } },
+    { updateOne: { filter: { key: 'unesco' }, update: { $setOnInsert: { key: 'unesco', label: 'UNESCO World Heritage records for project destinations', sourceUrl: 'https://whc.unesco.org/en/statesparties/in', recordsAccepted: OFFICIAL_UNESCO_HERITAGE.length, status: 'bundled-official' } }, upsert: true } },
     { updateOne: { filter: { key: 'festivals' }, update: { $setOnInsert: { key: 'festivals', label: 'Festival dataset', sourceUrl: '', status: 'seeded-demo' } }, upsert: true } },
     { updateOne: { filter: { key: 'tourismStatistics' }, update: { $setOnInsert: { key: 'tourismStatistics', label: 'Destination-level tourism observations', sourceUrl: '', status: 'awaiting official import' } }, upsert: true } },
     { updateOne: { filter: { key: 'regionalTourismStatistics' }, update: { $setOnInsert: { key: 'regionalTourismStatistics', label: 'Ministry of Tourism state/UT visits, 2023–2024', sourceUrl: 'https://data.tourism.gov.in/mrd/Uploads/tourism_data/India%20Tourism%20Data%20Compendium%202025_1.pdf', recordsAccepted: OFFICIAL_REGIONAL_TOURISM_STATS.length, status: 'bundled-official' } }, upsert: true } },
     { updateOne: { filter: { key: 'behaviour' }, update: { $setOnInsert: { key: 'behaviour', label: 'Tourist behaviour logs', sourceUrl: '', status: 'demo-and-import' } }, upsert: true } }
   ]);
+  await db.collection('sourceRegistry').updateOne(
+    { key: 'unesco', status: 'awaiting official import' },
+    { $set: { label: 'UNESCO World Heritage records for project destinations', sourceUrl: 'https://whc.unesco.org/en/statesparties/in', recordsAccepted: OFFICIAL_UNESCO_HERITAGE.length, status: 'bundled-official' } }
+  );
   for (const [id, name, email, password, role] of accountSeeds) {
     await db.collection('users').updateOne({ id }, { $set: { id, name, email, passwordHash: await bcrypt.hash(password, 12), role, home: role === 'tourist' ? 'Bengaluru' : 'India', homeLocation: role === 'tourist' ? touristHome : null, budget: 9000, interests: role === 'tourist' ? SEED.users[0].interests : {}, history: role === 'tourist' ? SEED.users[0].history : [] } }, { upsert: true });
   }

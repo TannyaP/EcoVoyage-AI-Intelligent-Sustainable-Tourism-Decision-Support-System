@@ -73,7 +73,7 @@ The Administrator dashboard’s **Refresh environment & OSM data** button then c
 - **WAQI**: air-quality index
 - **OpenStreetMap/Overpass**: nearby tourism POI count
 
-UNESCO heritage information, festivals and tourism statistics remain seeded in this prototype because the source datasets/API access credentials were not supplied. Seeded or fallback values are explicitly labelled in the app and database. Replace those documents with cited official exports before presenting research results as real-world findings.
+Verified UNESCO World Heritage records for Hampi and Kaziranga, and Ministry of Tourism state/UT figures, are bundled with provenance. Festivals, destination-level visitor observations, historical environmental observations and tourist-behaviour data remain demo data until cited or consented records are imported. Seeded or fallback values are explicitly labelled in the app and database.
 
 ## Completion additions
 
@@ -106,6 +106,8 @@ UNESCO heritage information, festivals and tourism statistics remain seeded in t
 ## Research-data note
 
 The repository now includes a cited Ministry of Tourism state/UT extract in `data/official/tourism-state-visits-2023-2024.json`. On first start it is seeded into the separate MongoDB `regionalTourismStatistics` collection. It is useful policy context, but it is deliberately not used as a destination crowd target: state/UT totals do not measure Munnar, Coorg, Hampi, Rishikesh, Puducherry or Kaziranga individually.
+
+`data/official/unesco-world-heritage.json` contains the official UNESCO World Heritage records for the two matching project destinations: Group of Monuments at Hampi and Kaziranga National Park. They seed into MongoDB’s `heritageSites` collection through idempotent upserts and add designation metadata to their matching destination documents. The value `protectionLevel: 100` is an explicitly labelled **application policy safeguard**, not a UNESCO-issued score.
 
 To produce a valid non-synthetic model evaluation, import at least 30 time-stamped, destination-level visitor observations and set `modelEligible: true` only after confirming each observation is for that exact destination and period. State/UT data is rejected from the destination-training importer and is always stored with `modelEligible: false`. See `DATA_SOURCES.md` for the source citation, data boundary and responsible-use guidance.
 

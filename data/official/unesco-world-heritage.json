@@ -1,0 +1,32 @@
+[
+  {
+    "id": "unesco-241bis",
+    "destinationId": "hampi",
+    "name": "Group of Monuments at Hampi",
+    "category": "UNESCO World Heritage — Cultural",
+    "location": { "type": "Point", "coordinates": [76.47167, 15.31444] },
+    "officialId": "241bis",
+    "officialDesignation": "UNESCO World Heritage property",
+    "inscribedYear": 1986,
+    "criteria": ["i", "iii", "iv"],
+    "propertyHectares": 4187.24,
+    "protectionLevel": 100,
+    "protectionLevelBasis": "application policy: maximum safeguard for UNESCO World Heritage",
+    "officialUrl": "https://whc.unesco.org/en/list/241"
+  },
+  {
+    "id": "unesco-337",
+    "destinationId": "kaziranga",
+    "name": "Kaziranga National Park",
+    "category": "UNESCO World Heritage — Natural",
+    "location": { "type": "Point", "coordinates": [93.41667, 26.66667] },
+    "officialId": "337",
+    "officialDesignation": "UNESCO World Heritage property",
+    "inscribedYear": 1985,
+    "criteria": ["ix", "x"],
+    "propertyHectares": 42996,
+    "protectionLevel": 100,
+    "protectionLevelBasis": "application policy: maximum safeguard for UNESCO World Heritage",
+    "officialUrl": "https://whc.unesco.org/en/list/337"
+  }
+]

@@ -77,7 +77,7 @@ Verified UNESCO World Heritage records for Hampi and Kaziranga, and Ministry of 
 
 ## Completion additions
 
-- **Automated ingestion:** Set `INGEST_INTERVAL_MINUTES` to `5` or greater to schedule the same validated environmental ingestion job used by the Admin dashboard. Each run is auditable in the `ingestionRuns` collection.
+- **Automated ingestion:** Set `INGEST_INTERVAL_MINUTES` to `5` or greater to schedule the same validated environmental ingestion job used by the Admin dashboard. OpenWeather, WAQI and OpenStreetMap calls are isolated: one provider failing does not prevent the others from refreshing. Every run stores per-connector success, failure and not-configured counts in MongoDB’s `ingestionRuns` collection.
 - **Official-data import:** The Admin dashboard accepts JSON records for destinations, destination-level tourism observations, state/UT tourism context, historical environment readings, UNESCO/heritage sites, festivals and tourist-behaviour logs. It validates fields, normalises dates/coordinates/categories, records rejected-row examples and stores provenance in `sourceRegistry`.
 - **Full capacity factors:** Carrying-capacity calculations now account for weather, AQI, water availability, heritage protection and protected-area sensitivity.
 - **Similarity and eco-routes:** The hybrid ranker includes transparent cosine similarity to destinations in the tourist’s history. The Tourist dashboard also provides an OSRM-based route when reachable, transparent low-carbon travel guidance and an estimated shared-transport versus private-car comparison.

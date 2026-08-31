@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const { MongoClient } = require('mongodb');
 const { round, predictModel, trainCrowdModel, capacityAssessment } = require('./lib/analytics');
 const { buildResearchReadiness } = require('./lib/research-readiness');
+const { connectorSummary } = require('./lib/connector-audit');
 
 const ROOT = __dirname;
 const SEED = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'seed.json'), 'utf8'));
@@ -167,7 +168,7 @@ async function databaseSummary() {
     latestModel: latestRun ? { algorithm: latestRun.algorithm, trainedAt: latestRun.trainedAt, regression: latestRun.regression, recommendation: latestRun.recommendation, dataLabel: latestRun.dataLabel } : null,
     latestReadingAt: latestReading?.recordedAt || null,
     latestPerformance: latestPerformance ? { recordedAt: latestPerformance.recordedAt, operations: latestPerformance.operations, environment: latestPerformance.environment } : null,
-    latestIngestion: latestIngestion ? { trigger: latestIngestion.trigger, completedAt: latestIngestion.completedAt, recordsWritten: latestIngestion.recordsWritten, liveRecords: latestIngestion.liveRecords } : null,
+    latestIngestion: latestIngestion ? { trigger: latestIngestion.trigger, completedAt: latestIngestion.completedAt, recordsWritten: latestIngestion.recordsWritten, liveRecords: latestIngestion.liveRecords, connectorSummary: latestIngestion.connectorSummary || null } : null,
     visitSummary
   };
 }
@@ -217,27 +218,34 @@ async function syncAssessments(destinations, model, festivals) {
 
 async function fetchLiveData(destination) {
   const point = destination.location.coordinates;
-  const result = { destinationId: destination.id, source: [], aqi: destination.aqi, weather: destination.weather, temperature: destination.temperature, rainRisk: destination.rainRisk, poiCount: null, live: false, notes: [] };
+  const result = { destinationId: destination.id, source: [], aqi: destination.aqi, weather: destination.weather, temperature: destination.temperature, rainRisk: destination.rainRisk, poiCount: null, live: false, notes: [], connectorStatus: {} };
   if (process.env.OPENWEATHER_API_KEY) {
-    const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${point[1]}&lon=${point[0]}&appid=${process.env.OPENWEATHER_API_KEY}&units=metric`);
-    if (!response.ok) throw new Error(`OpenWeather returned ${response.status}`);
-    const weather = await response.json();
-    result.temperature = weather.main.temp;
-    result.rainRisk = Math.min(100, Math.round((weather.clouds?.all || 0) * .65 + (weather.rain ? 35 : 0)));
-    result.weather = weather.weather?.[0]?.main?.toLowerCase().includes('clear') ? 'pleasant' : weather.main.temp > 29 ? 'warm' : 'humid';
-    result.source.push('OpenWeather'); result.live = true;
-  } else result.notes.push('OpenWeather key not configured; seeded weather retained.');
+    try {
+      const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${point[1]}&lon=${point[0]}&appid=${process.env.OPENWEATHER_API_KEY}&units=metric`, { signal: AbortSignal.timeout(8000) });
+      if (!response.ok) throw new Error(`returned ${response.status}`);
+      const weather = await response.json();
+      if (!Number.isFinite(Number(weather.main?.temp))) throw new Error('returned no usable temperature');
+      result.temperature = Number(weather.main.temp);
+      result.rainRisk = Math.min(100, Math.round((weather.clouds?.all || 0) * .65 + (weather.rain ? 35 : 0)));
+      result.weather = weather.weather?.[0]?.main?.toLowerCase().includes('clear') ? 'pleasant' : weather.main.temp > 29 ? 'warm' : 'humid';
+      result.source.push('OpenWeather'); result.live = true; result.connectorStatus.OpenWeather = 'success';
+    } catch (error) { result.connectorStatus.OpenWeather = 'failed'; result.notes.push(`OpenWeather unavailable: ${error.message}`); }
+  } else { result.connectorStatus.OpenWeather = 'not-configured'; result.notes.push('OpenWeather key not configured; seeded weather retained.'); }
   if (process.env.WAQI_TOKEN) {
-    const response = await fetch(`https://api.waqi.info/feed/geo:${point[1]};${point[0]}/?token=${process.env.WAQI_TOKEN}`);
-    if (!response.ok) throw new Error(`WAQI returned ${response.status}`);
-    const aqi = await response.json();
-    if (aqi.status === 'ok') { result.aqi = Number(aqi.data.aqi); result.source.push('WAQI'); result.live = true; }
-  } else result.notes.push('WAQI token not configured; seeded AQI retained.');
+    try {
+      const response = await fetch(`https://api.waqi.info/feed/geo:${point[1]};${point[0]}/?token=${process.env.WAQI_TOKEN}`, { signal: AbortSignal.timeout(8000) });
+      if (!response.ok) throw new Error(`returned ${response.status}`);
+      const aqi = await response.json();
+      if (aqi.status !== 'ok' || !Number.isFinite(Number(aqi.data?.aqi))) throw new Error('returned no usable AQI');
+      result.aqi = Number(aqi.data.aqi); result.source.push('WAQI'); result.live = true; result.connectorStatus.WAQI = 'success';
+    } catch (error) { result.connectorStatus.WAQI = 'failed'; result.notes.push(`WAQI unavailable: ${error.message}`); }
+  } else { result.connectorStatus.WAQI = 'not-configured'; result.notes.push('WAQI token not configured; seeded AQI retained.'); }
   try {
     const query = `[out:json][timeout:20];(nwr["tourism"](around:10000,${point[1]},${point[0]}););out center;`;
-    const response = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: query });
-    if (response.ok) { const osm = await response.json(); result.poiCount = osm.elements?.length || 0; result.source.push('OpenStreetMap'); result.live = true; }
-  } catch { result.notes.push('OSM collector unavailable; no POI count refreshed.'); }
+    const response = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: query, signal: AbortSignal.timeout(12000) });
+    if (!response.ok) throw new Error(`returned ${response.status}`);
+    const osm = await response.json(); result.poiCount = osm.elements?.length || 0; result.source.push('OpenStreetMap'); result.live = true; result.connectorStatus.OpenStreetMap = 'success';
+  } catch (error) { result.connectorStatus.OpenStreetMap = 'failed'; result.notes.push(`OpenStreetMap unavailable: ${error.message}`); }
   return result;
 }
 
@@ -247,9 +255,9 @@ async function ingestEnvironment(destinationIds) {
   for (const destination of destinations) {
     try {
       const live = await fetchLiveData(destination);
-      readings.push({ meta: { destinationId: destination.id, source: live.source.length ? live.source.join(', ') : 'seeded-fallback' }, aqi: live.aqi, weather: live.weather, temperature: live.temperature, rainRisk: live.rainRisk, poiCount: live.poiCount, isLive: live.live, notes: live.notes, recordedAt: new Date() });
+      readings.push({ meta: { destinationId: destination.id, source: live.source.length ? live.source.join(', ') : 'seeded-fallback' }, aqi: live.aqi, weather: live.weather, temperature: live.temperature, rainRisk: live.rainRisk, poiCount: live.poiCount, isLive: live.live, notes: live.notes, connectorStatus: live.connectorStatus, recordedAt: new Date() });
     } catch (error) {
-      readings.push({ meta: { destinationId: destination.id, source: 'seeded-fallback' }, aqi: destination.aqi, weather: destination.weather, temperature: destination.temperature, rainRisk: destination.rainRisk, poiCount: null, isLive: false, notes: [error.message], recordedAt: new Date() });
+      readings.push({ meta: { destinationId: destination.id, source: 'seeded-fallback' }, aqi: destination.aqi, weather: destination.weather, temperature: destination.temperature, rainRisk: destination.rainRisk, poiCount: null, isLive: false, notes: [error.message], connectorStatus: { OpenWeather: 'failed', WAQI: 'failed', OpenStreetMap: 'failed' }, recordedAt: new Date() });
     }
   }
   if (readings.length) await db.collection('environmentReadings').insertMany(readings);
@@ -267,6 +275,7 @@ async function runIngestionJob(trigger = 'manual', destinationIds) {
       recordsWritten: readings.length,
       liveRecords: readings.filter(reading => reading.isLive).length,
       sources: [...new Set(readings.flatMap(reading => reading.meta.source.split(', ')))],
+      connectorSummary: connectorSummary(readings),
       status: 'completed'
     };
     await db.collection('ingestionRuns').insertOne(run);

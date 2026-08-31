@@ -83,6 +83,7 @@ Verified UNESCO World Heritage records for Hampi and Kaziranga, and Ministry of 
 - **Similarity and eco-routes:** The hybrid ranker includes transparent cosine similarity to destinations in the tourist’s history. The Tourist dashboard also provides an OSRM-based route when reachable, transparent low-carbon travel guidance and an estimated shared-transport versus private-car comparison.
 - **Heatmap and latency:** Maps display crowd-pressure heat overlays. The Admin dashboard can persist local MongoDB timing results for `$near`, latest-environment `$lookup` and indexed tag filtering; Government users can view the latest latency evidence.
 - **Atlas Search fallback:** With an Atlas Search index configured, text search uses `$search`; a safe indexed-field/regex fallback keeps the local MongoDB classroom demo working without Atlas.
+- **Atlas deployment package:** `atlas/destination-search-index.json` is a static Atlas Search definition for the exact fields queried by the application. `ATLAS_DEPLOYMENT.md` provides a no-secret Atlas connection, index-creation and verification checklist; `npm run validate:atlas` validates the checked-in index definition.
 
 ## API endpoints
 

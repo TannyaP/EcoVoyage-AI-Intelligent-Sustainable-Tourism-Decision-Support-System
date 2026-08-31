@@ -10,6 +10,7 @@ const { round, predictModel, trainCrowdModel, capacityAssessment } = require('./
 
 const ROOT = __dirname;
 const SEED = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'seed.json'), 'utf8'));
+const OFFICIAL_REGIONAL_TOURISM_STATS = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'official', 'tourism-state-visits-2023-2024.json'), 'utf8'));
 const PORT = process.env.PORT || 3000;
 const URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
 const DB_NAME = process.env.MONGODB_DB || 'ecovoyage_ai';
@@ -150,7 +151,7 @@ async function latestDestinations() {
 }
 
 async function databaseSummary() {
-  const names = ['users', 'destinations', 'heritageSites', 'visits', 'environmentReadings', 'festivals', 'tourismStatistics', 'modelRuns', 'capacityAssessments', 'ingestionRuns', 'performanceRuns', 'sourceRegistry'];
+  const names = ['users', 'destinations', 'heritageSites', 'visits', 'environmentReadings', 'festivals', 'tourismStatistics', 'regionalTourismStatistics', 'modelRuns', 'capacityAssessments', 'ingestionRuns', 'performanceRuns', 'sourceRegistry'];
   const collectionCounts = Object.fromEntries(await Promise.all(names.map(async name => [name, await db.collection(name).countDocuments()])));
   const [latestRun, latestReading, visitSummary, latestPerformance, latestIngestion] = await Promise.all([
     db.collection('modelRuns').find().sort({ trainedAt: -1 }).limit(1).next(),
@@ -179,7 +180,10 @@ async function getModel() { return db.collection('modelRuns').find().sort({ trai
 async function runModelTraining() {
   const [destinations, statistics, festivals] = await Promise.all([db.collection('destinations').find().toArray(), db.collection('tourismStatistics').find().toArray(), db.collection('festivals').find().toArray()]);
   const byDestination = Object.fromEntries(destinations.map(destination => [destination.id, destination]));
-  const history = statistics.map(record => {
+  // State/UT totals are valuable policy context, but are not ground-truth counts for a
+  // particular destination. Train only on explicitly approved destination-level rows.
+  const eligibleStatistics = statistics.filter(record => record.geographicLevel === 'destination' && record.modelEligible === true);
+  const history = eligibleStatistics.map(record => {
     const destination = byDestination[record.destinationId];
     const reportedAt = new Date(record.reportedAt);
     if (!destination || Number.isNaN(reportedAt.getTime())) return null;
@@ -191,7 +195,12 @@ async function runModelTraining() {
     };
   }).filter(Boolean);
   const run = trainCrowdModel(destinations, history);
-  run.trainingData = { importedRowsAvailable: history.length, source: history.length >= 30 ? 'tourismStatistics collection' : 'synthetic fallback until at least 30 imported records are available' };
+  run.trainingData = {
+    tourismRowsAvailable: statistics.length,
+    eligibleDestinationRows: history.length,
+    excludedForGranularity: statistics.length - eligibleStatistics.length,
+    source: history.length >= 30 ? 'approved destination-level tourismStatistics records' : 'synthetic fallback until at least 30 approved destination-level records are available'
+  };
   await db.collection('modelRuns').insertOne(run);
   return run;
 }
@@ -327,7 +336,17 @@ function normaliseDatasetRecord(dataset, raw, index) {
     const reportedAt = normaliseDate(record.reportedAt || record.date || record.period);
     const visitors = Number(record.visitors ?? record.arrivals ?? record.count);
     if (!destinationId || !reportedAt || !Number.isFinite(visitors) || visitors < 0) return { error: `Row ${sourceRow}: tourism statistics require destinationId, date and non-negative visitors.` };
-    return { value: { destinationId, reportedAt, visitors: Math.round(visitors), domesticVisitors: Number.isFinite(Number(record.domesticVisitors)) ? Math.round(Number(record.domesticVisitors)) : null, foreignVisitors: Number.isFinite(Number(record.foreignVisitors)) ? Math.round(Number(record.foreignVisitors)) : null, sourcePeriod: safeText(record.sourcePeriod || ''), dataLabel: 'external-import' } };
+    const geographicLevel = safeText(record.geographicLevel || 'destination').toLowerCase();
+    if (geographicLevel !== 'destination') return { error: `Row ${sourceRow}: use regional tourism statistics for state/UT/district totals.` };
+    return { value: { destinationId, reportedAt, visitors: Math.round(visitors), domesticVisitors: Number.isFinite(Number(record.domesticVisitors)) ? Math.round(Number(record.domesticVisitors)) : null, foreignVisitors: Number.isFinite(Number(record.foreignVisitors)) ? Math.round(Number(record.foreignVisitors)) : null, sourcePeriod: safeText(record.sourcePeriod || ''), geographicLevel, modelEligible: record.modelEligible === true, dataLabel: 'external-import' } };
+  }
+  if (dataset === 'regionalTourismStatistics') {
+    const region = safeText(record.region || record.state || record.unionTerritory);
+    const reportedAt = normaliseDate(record.reportedAt || record.date || record.period);
+    const domesticVisitsMillions = Number(record.domesticVisitsMillions ?? record.domesticVisitorsMillions ?? record.domesticVisits);
+    const foreignVisitsMillions = Number(record.foreignVisitsMillions ?? record.foreignVisitorsMillions ?? record.foreignVisits);
+    if (!region || !reportedAt || !Number.isFinite(domesticVisitsMillions) || domesticVisitsMillions < 0 || !Number.isFinite(foreignVisitsMillions) || foreignVisitsMillions < 0) return { error: `Row ${sourceRow}: regional tourism statistics require region, date, domesticVisitsMillions and foreignVisitsMillions.` };
+    return { value: { region, reportedAt, domesticVisitsMillions: round(domesticVisitsMillions, 3), foreignVisitsMillions: round(foreignVisitsMillions, 3), sourcePeriod: safeText(record.sourcePeriod || ''), geographicLevel: 'state-or-ut', modelEligible: false, dataLabel: 'external-import' } };
   }
   if (dataset === 'festivals') {
     const destinationId = slug(record.destinationId || record.destination || record.place);
@@ -361,8 +380,8 @@ function normaliseDatasetRecord(dataset, raw, index) {
 }
 
 async function importDataset({ dataset, records, sourceName, sourceUrl }) {
-  const supported = ['destinations', 'tourismStatistics', 'festivals', 'heritageSites', 'environmentReadings', 'behaviour'];
-  if (!supported.includes(dataset)) throw new Error('Choose destinations, tourismStatistics, festivals, heritageSites, environmentReadings or behaviour.');
+  const supported = ['destinations', 'tourismStatistics', 'regionalTourismStatistics', 'festivals', 'heritageSites', 'environmentReadings', 'behaviour'];
+  if (!supported.includes(dataset)) throw new Error('Choose destinations, destination tourism statistics, regional tourism statistics, festivals, heritage sites, environmental readings or behaviour.');
   if (!Array.isArray(records) || !records.length || records.length > MAX_IMPORT_RECORDS) throw new Error(`Provide 1 to ${MAX_IMPORT_RECORDS} JSON records.`);
   const accepted = []; const rejected = [];
   records.forEach((record, index) => {
@@ -385,10 +404,14 @@ async function importDataset({ dataset, records, sourceName, sourceUrl }) {
 async function dataSourceStatus() {
   const imported = await db.collection('sourceRegistry').find().toArray();
   const byKey = Object.fromEntries(imported.map(record => [record.key, record]));
-  const state = key => byKey[key]?.lastImportedAt ? `imported ${new Date(byKey[key].lastImportedAt).toLocaleDateString('en-IN')}` : 'awaiting official import';
+  const state = key => {
+    const record = byKey[key];
+    if (record?.status === 'bundled-official') return `bundled official extract (${record.recordsAccepted || 0} rows; contextual only)`;
+    return record?.lastImportedAt ? `imported ${new Date(record.lastImportedAt).toLocaleDateString('en-IN')}` : 'awaiting official import';
+  };
   return {
     OpenWeather: process.env.OPENWEATHER_API_KEY ? 'configured' : 'needs API key', WAQI: process.env.WAQI_TOKEN ? 'configured' : 'needs API key', OpenStreetMap: 'public connector',
-    UNESCO: state('unesco'), festivals: state('festivals'), tourismStatistics: state('tourismStatistics'), touristBehaviour: state('behaviour'), historicalEnvironment: state('environmentReadings'), scheduler: INGEST_INTERVAL_MINUTES > 0 ? `every ${INGEST_INTERVAL_MINUTES} min` : 'manual only', atlasSearch: USE_ATLAS_SEARCH ? 'enabled' : 'MongoDB fallback search'
+    UNESCO: state('unesco'), festivals: state('festivals'), destinationTourism: state('tourismStatistics'), regionalTourism: state('regionalTourismStatistics'), touristBehaviour: state('behaviour'), historicalEnvironment: state('environmentReadings'), scheduler: INGEST_INTERVAL_MINUTES > 0 ? `every ${INGEST_INTERVAL_MINUTES} min` : 'manual only', atlasSearch: USE_ATLAS_SEARCH ? 'enabled' : 'MongoDB fallback search'
   };
 }
 
@@ -553,6 +576,7 @@ async function initialise() {
   await db.collection('heritageSites').createIndex({ destinationId: 1 });
   await db.collection('visits').createIndex({ userId: 1, at: -1 });
   await db.collection('tourismStatistics').createIndex({ destinationId: 1, reportedAt: -1 });
+  await db.collection('regionalTourismStatistics').createIndex({ region: 1, reportedAt: -1 });
   await db.collection('festivals').createIndex({ destinationId: 1, month: 1 });
   await db.collection('modelRuns').createIndex({ trainedAt: -1 });
   await db.collection('capacityAssessments').createIndex({ destinationId: 1, createdAt: -1 });
@@ -569,10 +593,24 @@ async function initialise() {
     } }]);
   }
   if (!await db.collection('festivals').countDocuments()) await db.collection('festivals').insertMany(festivalSeeds);
+  if (!await db.collection('regionalTourismStatistics').countDocuments()) {
+    const importedAt = new Date();
+    await db.collection('regionalTourismStatistics').insertMany(OFFICIAL_REGIONAL_TOURISM_STATS.map(record => ({
+      ...record,
+      reportedAt: new Date(record.reportedAt),
+      geographicLevel: 'state-or-ut',
+      modelEligible: false,
+      source: 'Ministry of Tourism, Government of India',
+      sourceUrl: 'https://data.tourism.gov.in/mrd/Uploads/tourism_data/India%20Tourism%20Data%20Compendium%202025_1.pdf',
+      importedAt,
+      dataLabel: 'official public state/UT aggregate; excluded from destination model training'
+    })));
+  }
   await db.collection('sourceRegistry').bulkWrite([
     { updateOne: { filter: { key: 'unesco' }, update: { $setOnInsert: { key: 'unesco', label: 'UNESCO World Heritage data', sourceUrl: 'https://whc.unesco.org/en/list/', status: 'awaiting official import' } }, upsert: true } },
     { updateOne: { filter: { key: 'festivals' }, update: { $setOnInsert: { key: 'festivals', label: 'Festival dataset', sourceUrl: '', status: 'seeded-demo' } }, upsert: true } },
-    { updateOne: { filter: { key: 'tourismStatistics' }, update: { $setOnInsert: { key: 'tourismStatistics', label: 'India tourism statistics', sourceUrl: 'https://www.data.gov.in/', status: 'awaiting official import' } }, upsert: true } },
+    { updateOne: { filter: { key: 'tourismStatistics' }, update: { $setOnInsert: { key: 'tourismStatistics', label: 'Destination-level tourism observations', sourceUrl: '', status: 'awaiting official import' } }, upsert: true } },
+    { updateOne: { filter: { key: 'regionalTourismStatistics' }, update: { $setOnInsert: { key: 'regionalTourismStatistics', label: 'Ministry of Tourism state/UT visits, 2023–2024', sourceUrl: 'https://data.tourism.gov.in/mrd/Uploads/tourism_data/India%20Tourism%20Data%20Compendium%202025_1.pdf', recordsAccepted: OFFICIAL_REGIONAL_TOURISM_STATS.length, status: 'bundled-official' } }, upsert: true } },
     { updateOne: { filter: { key: 'behaviour' }, update: { $setOnInsert: { key: 'behaviour', label: 'Tourist behaviour logs', sourceUrl: '', status: 'demo-and-import' } }, upsert: true } }
   ]);
   for (const [id, name, email, password, role] of accountSeeds) {

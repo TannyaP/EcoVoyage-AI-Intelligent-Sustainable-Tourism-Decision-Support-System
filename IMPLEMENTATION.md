@@ -78,7 +78,7 @@ UNESCO heritage information, festivals and tourism statistics remain seeded in t
 ## Completion additions
 
 - **Automated ingestion:** Set `INGEST_INTERVAL_MINUTES` to `5` or greater to schedule the same validated environmental ingestion job used by the Admin dashboard. Each run is auditable in the `ingestionRuns` collection.
-- **Official-data import:** The Admin dashboard accepts JSON records for destinations, tourism statistics, historical environment readings, UNESCO/heritage sites, festivals and tourist-behaviour logs. It validates fields, normalises dates/coordinates/categories, records rejected-row examples and stores provenance in `sourceRegistry`. At 30 or more imported tourism-statistic rows, training uses them instead of the synthetic demonstration history.
+- **Official-data import:** The Admin dashboard accepts JSON records for destinations, destination-level tourism observations, state/UT tourism context, historical environment readings, UNESCO/heritage sites, festivals and tourist-behaviour logs. It validates fields, normalises dates/coordinates/categories, records rejected-row examples and stores provenance in `sourceRegistry`.
 - **Full capacity factors:** Carrying-capacity calculations now account for weather, AQI, water availability, heritage protection and protected-area sensitivity.
 - **Similarity and eco-routes:** The hybrid ranker includes transparent cosine similarity to destinations in the tourist’s history. The Tourist dashboard also provides an OSRM-based route when reachable, transparent low-carbon travel guidance and an estimated shared-transport versus private-car comparison.
 - **Heatmap and latency:** Maps display crowd-pressure heat overlays. The Admin dashboard can persist local MongoDB timing results for `$near`, latest-environment `$lookup` and indexed tag filtering; Government users can view the latest latency evidence.
@@ -105,4 +105,29 @@ UNESCO heritage information, festivals and tourism statistics remain seeded in t
 
 ## Research-data note
 
-The currently stored historical visitor records and relevance labels are synthetic demo data. They validate the pipeline and calculation flow, but they must be replaced with a cited India tourism dataset before the evaluation scores are reported in the paper as experimental results.
+The repository now includes a cited Ministry of Tourism state/UT extract in `data/official/tourism-state-visits-2023-2024.json`. On first start it is seeded into the separate MongoDB `regionalTourismStatistics` collection. It is useful policy context, but it is deliberately not used as a destination crowd target: state/UT totals do not measure Munnar, Coorg, Hampi, Rishikesh, Puducherry or Kaziranga individually.
+
+To produce a valid non-synthetic model evaluation, import at least 30 time-stamped, destination-level visitor observations and set `modelEligible: true` only after confirming each observation is for that exact destination and period. State/UT data is rejected from the destination-training importer and is always stored with `modelEligible: false`. See `DATA_SOURCES.md` for the source citation, data boundary and responsible-use guidance.
+
+Example destination-level import record:
+
+```json
+{
+  "destinationId": "munnar",
+  "date": "2026-01-01",
+  "visitors": 4200,
+  "geographicLevel": "destination",
+  "modelEligible": true
+}
+```
+
+Example state/UT context import record:
+
+```json
+{
+  "region": "Kerala",
+  "date": "2024-12-31",
+  "domesticVisitsMillions": 22.247,
+  "foreignVisitsMillions": 0.738
+}
+```

@@ -1,0 +1,12 @@
+[
+  { "region": "Assam", "reportedAt": "2023-12-31", "domesticVisitsMillions": 7.613, "foreignVisitsMillions": 0.024, "sourcePeriod": "2023", "valuePrecision": "millions, three decimal places" },
+  { "region": "Assam", "reportedAt": "2024-12-31", "domesticVisitsMillions": 7.608, "foreignVisitsMillions": 0.027, "sourcePeriod": "2024", "valuePrecision": "millions, three decimal places" },
+  { "region": "Karnataka", "reportedAt": "2023-12-31", "domesticVisitsMillions": 284.121, "foreignVisitsMillions": 0.409, "sourcePeriod": "2023", "valuePrecision": "millions, three decimal places" },
+  { "region": "Karnataka", "reportedAt": "2024-12-31", "domesticVisitsMillions": 304.564, "foreignVisitsMillions": 0.485, "sourcePeriod": "2024", "valuePrecision": "millions, three decimal places" },
+  { "region": "Kerala", "reportedAt": "2023-12-31", "domesticVisitsMillions": 21.872, "foreignVisitsMillions": 0.649, "sourcePeriod": "2023", "valuePrecision": "millions, three decimal places" },
+  { "region": "Kerala", "reportedAt": "2024-12-31", "domesticVisitsMillions": 22.247, "foreignVisitsMillions": 0.738, "sourcePeriod": "2024", "valuePrecision": "millions, three decimal places" },
+  { "region": "Tamil Nadu", "reportedAt": "2023-12-31", "domesticVisitsMillions": 286.012, "foreignVisitsMillions": 1.175, "sourcePeriod": "2023", "valuePrecision": "millions, three decimal places" },
+  { "region": "Tamil Nadu", "reportedAt": "2024-12-31", "domesticVisitsMillions": 306.842, "foreignVisitsMillions": 1.161, "sourcePeriod": "2024", "valuePrecision": "millions, three decimal places" },
+  { "region": "Uttarakhand", "reportedAt": "2023-12-31", "domesticVisitsMillions": 57.571, "foreignVisitsMillions": 0.143, "sourcePeriod": "2023", "valuePrecision": "millions, three decimal places" },
+  { "region": "Uttarakhand", "reportedAt": "2024-12-31", "domesticVisitsMillions": 60.849, "foreignVisitsMillions": 0.139, "sourcePeriod": "2024", "valuePrecision": "millions, three decimal places" }
+]

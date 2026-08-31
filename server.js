@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { MongoClient } = require('mongodb');
 const { round, predictModel, trainCrowdModel, capacityAssessment } = require('./lib/analytics');
+const { buildResearchReadiness } = require('./lib/research-readiness');
 
 const ROOT = __dirname;
 const SEED = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'seed.json'), 'utf8'));
@@ -297,7 +298,7 @@ async function runPerformanceEvaluation() {
   const run = {
     recordedAt: new Date(),
     operations: Object.fromEntries(Object.entries(samples).map(([name, values]) => [name, latencySummary(values)])),
-    environment: { database: DB_NAME, host: process.platform, samplesPerOperation: 12, dataLabel: 'local development benchmark; rerun in the target deployment environment' }
+    environment: { database: DB_NAME, host: process.platform, deployment: URI.startsWith('mongodb+srv://') ? 'mongodb-atlas' : 'local-mongodb', samplesPerOperation: 12, dataLabel: 'benchmark is valid only for the recorded deployment environment' }
   };
   await db.collection('performanceRuns').insertOne(run);
   return run;
@@ -377,7 +378,11 @@ function normaliseDatasetRecord(dataset, raw, index) {
     const destinationId = slug(record.destinationId || record.destination || record.place);
     const at = normaliseDate(record.at || record.date || new Date());
     if (!userId || !destinationId || !at) return { error: `Row ${sourceRow}: behaviour requires userId, destinationId and date.` };
-    return { value: { userId, destinationId, action: safeText(record.action || 'visited'), rating: Number.isFinite(Number(record.rating)) ? clamp(record.rating, 1, 5) : null, durationNights: Number.isFinite(Number(record.durationNights)) ? clamp(record.durationNights, 0, 90) : null, tripBudget: Number.isFinite(Number(record.tripBudget)) ? clamp(record.tripBudget, 0, 1000000) : null, season: safeText(record.season || ''), at, source: 'external-import', dataLabel: 'external-import' } };
+    const researchConsent = record.researchConsent === true;
+    const deidentified = record.deidentified === true;
+    const consentReference = safeText(record.consentReference || '');
+    if (researchConsent && (!deidentified || !consentReference)) return { error: `Row ${sourceRow}: research-consented behaviour requires deidentified: true and a non-identifying consentReference.` };
+    return { value: { userId, destinationId, action: safeText(record.action || 'visited'), rating: Number.isFinite(Number(record.rating)) ? clamp(record.rating, 1, 5) : null, durationNights: Number.isFinite(Number(record.durationNights)) ? clamp(record.durationNights, 0, 90) : null, tripBudget: Number.isFinite(Number(record.tripBudget)) ? clamp(record.tripBudget, 0, 1000000) : null, season: safeText(record.season || ''), researchConsent, deidentified, consentReference, at, source: 'external-import', dataLabel: 'external-import' } };
   }
   return { error: `Unsupported dataset: ${dataset}.` };
 }
@@ -416,6 +421,21 @@ async function dataSourceStatus() {
     OpenWeather: process.env.OPENWEATHER_API_KEY ? 'configured' : 'needs API key', WAQI: process.env.WAQI_TOKEN ? 'configured' : 'needs API key', OpenStreetMap: 'public connector',
     UNESCO: state('unesco'), festivals: state('festivals'), destinationTourism: state('tourismStatistics'), regionalTourism: state('regionalTourismStatistics'), touristBehaviour: state('behaviour'), historicalEnvironment: state('environmentReadings'), scheduler: INGEST_INTERVAL_MINUTES > 0 ? `every ${INGEST_INTERVAL_MINUTES} min` : 'manual only', atlasSearch: USE_ATLAS_SEARCH ? 'enabled' : 'MongoDB fallback search'
   };
+}
+
+async function researchReadiness() {
+  const [destinationObservations, historicalEnvironmentObservations, approvedBehaviourRatings, liveEnvironmentObservations, latestPerformance, sourceRegistry] = await Promise.all([
+    db.collection('tourismStatistics').countDocuments({ geographicLevel: 'destination', modelEligible: true }),
+    db.collection('environmentReadings').countDocuments({ dataLabel: 'external-import' }),
+    db.collection('visits').countDocuments({ researchConsent: true, deidentified: true, consentReference: { $type: 'string', $ne: '' }, rating: { $type: 'number' } }),
+    db.collection('environmentReadings').countDocuments({ isLive: true }),
+    db.collection('performanceRuns').find().sort({ recordedAt: -1 }).limit(1).next(),
+    db.collection('sourceRegistry').find().toArray()
+  ]);
+  return buildResearchReadiness(
+    { destinationObservations, historicalEnvironmentObservations, approvedBehaviourRatings, liveEnvironmentObservations, latestPerformance, sourceRegistry },
+    { openWeather: Boolean(process.env.OPENWEATHER_API_KEY), waqi: Boolean(process.env.WAQI_TOKEN), atlasDeployment: URI.startsWith('mongodb+srv://'), atlasSearch: USE_ATLAS_SEARCH }
+  );
 }
 
 function escapeRegex(value) { return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
@@ -515,7 +535,7 @@ app.post('/api/interactions', auth('tourist'), async (req, res) => {
   const history = [destination.name, ...(req.user.history || [])].slice(0, 25);
   await Promise.all([
     db.collection('users').updateOne({ id: req.user.id }, { $set: { interests, history } }),
-    db.collection('visits').insertOne({ userId: req.user.id, destinationId: destination.id, action: safeText(action || 'saved'), rating: Number.isFinite(Number(rating)) ? clamp(rating, 1, 5) : null, durationNights: Number.isFinite(Number(durationNights)) ? clamp(durationNights, 0, 90) : null, tripBudget: Number.isFinite(Number(tripBudget)) ? clamp(tripBudget, 0, 1000000) : null, season: safeText(season || ''), at: new Date(), source: 'web-dashboard' })
+    db.collection('visits').insertOne({ userId: req.user.id, destinationId: destination.id, action: safeText(action || 'saved'), rating: Number.isFinite(Number(rating)) ? clamp(rating, 1, 5) : null, durationNights: Number.isFinite(Number(durationNights)) ? clamp(durationNights, 0, 90) : null, tripBudget: Number.isFinite(Number(tripBudget)) ? clamp(tripBudget, 0, 1000000) : null, season: safeText(season || ''), researchConsent: false, deidentified: false, at: new Date(), source: 'web-dashboard' })
   ]);
   res.status(201).json({ message: 'DTIP profile updated from observed behaviour.', interests, history });
 });
@@ -540,9 +560,11 @@ app.get('/api/analytics/evaluation', auth('government', 'admin'), async (req, re
 });
 
 app.get('/api/admin/database/status', auth('admin'), async (req, res) => {
-  const [summary, destinationIndexes, readingIndexes] = await Promise.all([databaseSummary(), db.collection('destinations').indexes(), db.collection('environmentReadings').indexes()]);
-  res.json({ ...summary, indexes: { destinations: destinationIndexes.map(index => index.name), environmentReadings: readingIndexes.map(index => index.name) } });
+  const [summary, destinationIndexes, readingIndexes, readiness] = await Promise.all([databaseSummary(), db.collection('destinations').indexes(), db.collection('environmentReadings').indexes(), researchReadiness()]);
+  res.json({ ...summary, researchReadiness: readiness, indexes: { destinations: destinationIndexes.map(index => index.name), environmentReadings: readingIndexes.map(index => index.name) } });
 });
+
+app.get('/api/admin/research-readiness', auth('admin'), async (req, res) => res.json(await researchReadiness()));
 
 app.post('/api/admin/environment/snapshots', auth('admin'), async (req, res) => {
   const { destinationId, aqi, weather, temperature, rainRisk, source = 'admin-manual' } = req.body || {};

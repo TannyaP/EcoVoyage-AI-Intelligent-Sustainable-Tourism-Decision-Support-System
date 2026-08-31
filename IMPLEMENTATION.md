@@ -96,6 +96,7 @@ Verified UNESCO World Heritage records for Hampi and Kaziranga, and Ministry of 
 | `GET /api/government/overview` | Capacity pressure and engagement analytics |
 | `GET /api/analytics/evaluation` | Model / recommender evaluation metrics |
 | `GET /api/admin/database/status` | Collection counts, indexes and latest model evidence |
+| `GET /api/admin/research-readiness` | Auditable evidence checklist for research-ready evaluation |
 | `POST /api/admin/environment/snapshots` | Manually insert an environmental reading |
 | `POST /api/admin/ingestion/run` | Run configured OpenWeather, WAQI and OSM ingestion |
 | `POST /api/admin/models/train` | Train and persist a Random Forest evaluation run |
@@ -111,6 +112,8 @@ The repository now includes a cited Ministry of Tourism state/UT extract in `dat
 `data/official/unesco-world-heritage.json` contains the official UNESCO World Heritage records for the two matching project destinations: Group of Monuments at Hampi and Kaziranga National Park. They seed into MongoDB’s `heritageSites` collection through idempotent upserts and add designation metadata to their matching destination documents. The value `protectionLevel: 100` is an explicitly labelled **application policy safeguard**, not a UNESCO-issued score.
 
 To produce a valid non-synthetic model evaluation, import at least 30 time-stamped, destination-level visitor observations and set `modelEligible: true` only after confirming each observation is for that exact destination and period. State/UT data is rejected from the destination-training importer and is always stored with `modelEligible: false`. See `DATA_SOURCES.md` for the source citation, data boundary and responsible-use guidance.
+
+The Administrator dashboard now includes a research-readiness audit. It checks the destination-level crowd history, historical environment import, festival provenance, de-identified consented ratings, successful live weather/AQI ingestion, Atlas Search configuration and a benchmark from the target deployment. It does not let normal demo-dashboard interactions qualify as research data; a behaviour import must explicitly set `researchConsent` and `deidentified` to `true` and supply a non-identifying `consentReference`.
 
 Example destination-level import record:
 

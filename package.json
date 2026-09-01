@@ -1,0 +1,31 @@
+{
+  "name": "ecovoyage-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MongoDB-backed sustainable tourism decision-support research prototype",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "node server.js",
+    "train": "node scripts/train-model.js",
+    "ingest": "node scripts/ingest-environment.js",
+    "validate:atlas": "node scripts/validate-atlas-index.js",
+    "validate:research": "node scripts/validate-research-readiness.js",
+    "validate:connectors": "node scripts/validate-connector-audit.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "leaflet": "^1.9.4",
+    "mongodb": "^6.20.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.0",
+    "vite": "^8.2.2"
+  }
+}

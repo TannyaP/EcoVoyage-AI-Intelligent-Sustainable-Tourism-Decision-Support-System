@@ -1,0 +1,23 @@
+{
+  "mappings": {
+    "dynamic": false,
+    "fields": {
+      "name": {
+        "type": "string",
+        "analyzer": "lucene.standard"
+      },
+      "state": {
+        "type": "string",
+        "analyzer": "lucene.standard"
+      },
+      "tags": {
+        "type": "string",
+        "analyzer": "lucene.standard"
+      },
+      "description": {
+        "type": "string",
+        "analyzer": "lucene.standard"
+      }
+    }
+  }
+}

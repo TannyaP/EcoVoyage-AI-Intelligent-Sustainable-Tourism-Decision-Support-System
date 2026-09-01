@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap');
+
+:root { --ink:#153b30; --pine:#174d3b; --cream:#f8f6ef; --line:#d8e2d9; --mint:#e8f4e7; --coral:#ef785f; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--cream); font-family:Manrope,Arial,sans-serif; color:var(--ink); }
+button,input,select,textarea { font:inherit; }
+button { border:0; border-radius:8px; background:var(--pine); color:#fff; padding:11px 14px; font-weight:800; cursor:pointer; }
+button:disabled { opacity:.6; cursor:wait; }
+h1 { margin:0; font-size:clamp(45px,6vw,76px); line-height:1.02; letter-spacing:-4px; }
+h1 em { font:600 italic clamp(44px,6vw,73px) 'Playfair Display'; color:#2d8b62; }
+h2 { margin:0; font-size:24px; letter-spacing:-1.1px; }
+.eyebrow { margin:0 0 12px; color:#43816b; font:500 11px 'DM Mono'; letter-spacing:1.2px; }
+.hint,.geo { font-size:11px; line-height:1.6; color:#6a8178; }
+.error { color:#c84b41; font-size:12px; }
+.light { background:#edf4ed; color:#2b604d; font-size:12px; }
+.login-shell { min-height:100vh; display:grid; grid-template-columns:1.15fr .85fr; align-items:center; gap:10vw; padding:8vh 9vw; background:radial-gradient(circle at 18% 82%,#d5ecd2 0,transparent 28%),var(--cream); }
+.login-copy>p:not(.eyebrow),.lead { max-width:560px; color:#587269; line-height:1.75; font-size:16px; }
+.role-list { display:flex; gap:9px; margin-top:28px; }
+.role-list span { background:#eaf4e8; border-radius:9px; padding:12px; font-size:12px; }
+.role-list small { display:block; color:#6f887f; font-size:10px; }
+.login-card,.profile,.panel { background:#fff; border:1px solid var(--line); border-radius:18px; padding:27px; box-shadow:0 15px 35px #1a3e2c0a; }
+.login-card label { display:block; margin:14px 0; font-size:12px; font-weight:700; }
+.login-card input,.login-card select,.import-panel input,.import-panel select,.import-panel textarea { width:100%; display:block; margin-top:6px; padding:10px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); }
+.login-card button { width:100%; margin-top:7px; }
+.loading { display:grid; place-items:center; min-height:100vh; }
+header { height:76px; padding:0 7vw; display:flex; align-items:center; gap:25px; border-bottom:1px solid var(--line); background:#fbfaf5; }
+.brand { font-size:22px; font-weight:800; letter-spacing:-1px; }
+.brand span { color:#2c9066; }.brand b { color:#e75743; }
+header p { flex:1; color:#628075; font-size:13px; }
+.live { font:12px 'DM Mono'; color:#477062; }.live i,.source span { display:inline-block; width:8px; height:8px; border-radius:100%; background:#58b989; margin-right:7px; }
+.app-shell { max-width:1220px; margin:auto; padding:52px 30px 70px; }
+.hero { display:grid; grid-template-columns:1.1fr .9fr; align-items:center; gap:62px; }.hero.compact { margin-bottom:12px; }
+.profile h3 { margin:0 0 15px; font-size:20px; }.big { margin:0; font-size:34px; font-weight:800; }
+.bar { display:grid; grid-template-columns:80px 1fr 34px; gap:9px; align-items:center; margin:9px 0; font-size:12px; }
+.bar>div,.meter-row>div { height:7px; border-radius:20px; background:#edf2ed; overflow:hidden; }.bar i,.meter-row i { display:block; height:100%; background:linear-gradient(90deg,#b2d577,#3eaa75); border-radius:inherit; }
+.budget { display:flex; justify-content:space-between; margin:22px 0 0; font-size:13px; }.budget b { color:#e75c47; }.geo { color:#34755c; margin:18px 0 0; }
+.stats { display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin:45px 0 42px; }.stat { background:var(--mint); border-radius:12px; padding:18px 20px; }.stat strong { display:block; font-size:27px; letter-spacing:-1px; }.stat small { color:#5b766b; font-size:12px; }
+.section-head { display:flex; justify-content:space-between; align-items:end; margin:42px 0 20px; }.section-head>span { font-size:11px; color:#688176; }
+.cards { display:grid; grid-template-columns:repeat(3,1fr); gap:17px; }.card { position:relative; background:#fff; border:1px solid var(--line); border-radius:17px; padding:21px; }.badge { position:absolute; top:17px; right:16px; padding:6px 9px; border-radius:20px; background:#e4f5e6; color:#28724f; font:11px 'DM Mono'; }.place { font-size:34px; }.card h3 { margin:10px 0 2px; font-size:19px; }.card small,.card p { color:#6a8178; font-size:12px; }.card p { min-height:36px; line-height:1.55; }
+.score { display:flex; align-items:end; gap:4px; margin-top:14px; }.score b { font-size:26px; }.score span,.score em { font-size:10px; color:#638076; font-style:normal; }.score em { margin-left:auto; }.chips { display:flex; flex-wrap:wrap; gap:5px; margin:12px 0; }.chips span { padding:5px 7px; border-radius:7px; background:#f0f5ee; font-size:10px; }.card-actions { display:flex; gap:8px; }.card-actions button { flex:1; padding:10px 8px; font-size:11px; }
+.grid-lower { display:grid; grid-template-columns:1.15fr .85fr; gap:18px; margin-top:52px; }.map-panel { min-height:400px; }.map { height:280px; border-radius:11px; margin-top:20px; overflow:hidden; }.meter-row { display:grid; grid-template-columns:102px 1fr 50px; align-items:center; gap:10px; margin:16px 0; font-size:12px; }.meter-row b { text-align:right; font-size:11px; }.meter-row i.high-pressure { background:var(--coral); }.meter-row i.watch { background:#eeb857; }
+.admin-actions { display:flex; gap:10px; margin:18px 0; }.notice { padding:10px 13px; border-radius:9px; background:#e4f5e6; color:#26704d; font-size:12px; }.metric-grid,.collection-list { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:21px 0; }.metric-grid span,.collection-list span { padding:12px; border-radius:9px; background:#eaf4e8; font-size:11px; }.metric-grid b,.collection-list b { display:block; font-size:22px; }.source { display:flex; align-items:center; gap:4px; border-bottom:1px solid #eef2ee; padding:9px 0; margin:0; font-size:12px; }.source b { margin-left:auto; font-size:10px; color:#648177; }.source .off { background:#e6ad58; }
+.search-panel,.route-summary { margin:0 0 40px; padding:20px 22px; border:1px solid var(--line); border-radius:14px; background:#fff; }.search-panel form { display:flex; gap:8px; }.search-panel input { flex:1; padding:10px; border:1px solid var(--line); border-radius:8px; }.search-results { display:flex; flex-wrap:wrap; gap:7px; }.search-results span { padding:7px 9px; background:var(--mint); border-radius:7px; font-size:11px; }
+.route-summary { border-color:#b9d8bc; background:linear-gradient(105deg,#edf7eb,#fff); }.route-summary h3 { margin:0; }.route-summary>p:not(.eyebrow):not(.hint) { font-size:13px; line-height:1.6; color:#557367; }.route-summary>div { display:flex; gap:12px; }.route-summary span { display:block; flex:1; padding:10px; border-radius:8px; background:#fff; font-size:11px; color:#58746a; }.route-summary b { display:block; font-size:19px; color:var(--pine); }
+.performance-list { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }.performance-list span { padding:12px; border-radius:9px; background:#eaf4e8; font-size:11px; text-transform:capitalize; }.performance-list b { display:block; font-size:20px; }.import-panel { margin-top:20px; }.import-panel label { display:block; font-size:11px; font-weight:700; margin:12px 0; }.import-meta { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }.import-panel textarea { min-height:135px; resize:vertical; font:12px 'DM Mono',monospace; line-height:1.5; }.import-panel button { margin-top:3px; }
+footer { text-align:center; border-top:1px solid var(--line); padding:24px; color:#6a8178; font-size:11px; }
+@media(max-width:760px) { .login-shell,.hero,.grid-lower { grid-template-columns:1fr; gap:30px; }.login-shell { padding:40px 24px; }.role-list,.route-summary>div { display:grid; }.role-list span { display:block; margin:6px 0; } header { padding:0 20px; } header p { display:none; }.app-shell { padding:35px 20px; }.stats { grid-template-columns:repeat(2,1fr); margin:35px 0; }.cards,.performance-list,.import-meta { grid-template-columns:1fr; }.section-head { display:block; }.section-head>span { display:block; margin-top:10px; }.admin-actions,.search-panel form,.card-actions { display:grid; }.map { height:250px; } }

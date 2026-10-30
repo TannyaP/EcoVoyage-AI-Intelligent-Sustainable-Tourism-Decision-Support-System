@@ -36,7 +36,7 @@ Passwords are bcrypt-hashed before storage. JWTs expire after eight hours.
 
 ## Implemented requirements
 
-| Review 1 component | Implementation |
+| Project component | Implementation |
 |---|---|
 | Tourist / Government / Admin dashboards | Role-based React views secured by JWT middleware |
 | MongoDB NoSQL architecture | `users`, `destinations`, `visits`, `environmentReadings`, `festivals`, `modelRuns`, `capacityAssessments` collections |
